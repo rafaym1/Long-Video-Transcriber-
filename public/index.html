@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Transcriber</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e8e8e8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 0.95rem;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      padding: 32px;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    /* Upload area */
+    .upload-area {
+      border: 2px dashed #3a3d4a;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .upload-area:hover, .upload-area.dragover {
+      border-color: #5b6af0;
+      background: rgba(91, 106, 240, 0.05);
+    }
+
+    .upload-area input[type="file"] {
+      display: none;
+    }
+
+    .upload-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .upload-label {
+      font-size: 1rem;
+      color: #aaa;
+    }
+
+    .upload-label strong {
+      color: #5b6af0;
+    }
+
+    .file-info {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #888;
+    }
+
+    /* Submit button */
+    .btn {
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      background: #5b6af0;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn:hover:not(:disabled) { background: #4a58e0; }
+    .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+    /* Progress */
+    #progress-section {
+      display: none;
+      margin-top: 24px;
+    }
+
+    .progress-label {
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-track {
+      background: #2a2d3a;
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: #5b6af0;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    /* Output */
+    #output-section {
+      display: none;
+      margin-top: 24px;
+    }
+
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .output-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .copy-btn {
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      background: #2a2d3a;
+      color: #ccc;
+      border: 1px solid #3a3d4a;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .copy-btn:hover { background: #3a3d4a; color: #fff; }
+    .copy-btn.copied { color: #4caf50; border-color: #4caf50; }
+
+    #text-display {
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 8px;
+      padding: 20px;
+      min-height: 200px;
+      max-height: 500px;
+      overflow-y: auto;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #ddd;
+    }
+
+    /* Error */
+    .error-box {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: rgba(220, 50, 50, 0.1);
+      border: 1px solid rgba(220, 50, 50, 0.3);
+      border-radius: 8px;
+      color: #f08080;
+      font-size: 0.9rem;
+    }
+
+    /* Word appear animation */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .word-new {
+      animation: fadeIn 0.15s ease;
+    }
+  </style>
+</head>
+<body>
+  <h1>Video Transcriber</h1>
+  <p class="subtitle">Upload a screen recording of a document — get back the full text.</p>
+
+  <div class="card">
+    <form id="upload-form">
+      <div class="upload-area" id="upload-area">
+        <input type="file" id="video-input" accept="video/*">
+        <div class="upload-icon">&#127916;</div>
+        <div class="upload-label">
+          <strong>Click to select</strong> or drag & drop a video
+        </div>
+        <div class="file-info" id="file-info">MP4, MOV, AVI, MKV &mdash; up to 500 MB</div>
+      </div>
+      <button class="btn" type="submit" id="submit-btn" disabled>Transcribe</button>
+    </form>
+
+    <div id="progress-section">
+      <div class="progress-label" id="progress-label">Starting...</div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progress-bar"></div>
+      </div>
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+
+    <div id="output-section">
+      <div class="output-header">
+        <span class="output-title">Extracted Text</span>
+        <button class="copy-btn" id="copy-btn">Copy</button>
+      </div>
+      <div id="text-display"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('upload-form')
+    const uploadArea = document.getElementById('upload-area')
+    const videoInput = document.getElementById('video-input')
+    const submitBtn = document.getElementById('submit-btn')
+    const fileInfo = document.getElementById('file-info')
+    const progressSection = document.getElementById('progress-section')
+    const progressLabel = document.getElementById('progress-label')
+    const progressBar = document.getElementById('progress-bar')
+    const errorBox = document.getElementById('error-box')
+    const outputSection = document.getElementById('output-section')
+    const textDisplay = document.getElementById('text-display')
+    const copyBtn = document.getElementById('copy-btn')
+
+    // File selection via click or drag-drop
+    uploadArea.addEventListener('click', () => videoInput.click())
+
+    uploadArea.addEventListener('dragover', e => {
+      e.preventDefault()
+      uploadArea.classList.add('dragover')
+    })
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'))
+    uploadArea.addEventListener('drop', e => {
+      e.preventDefault()
+      uploadArea.classList.remove('dragover')
+      const file = e.dataTransfer.files[0]
+      if (file && file.type.startsWith('video/')) {
+        setFile(file)
+      }
+    })
+
+    videoInput.addEventListener('change', () => {
+      if (videoInput.files[0]) setFile(videoInput.files[0])
+    })
+
+    function setFile(file) {
+      fileInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`
+      submitBtn.disabled = false
+    }
+
+    function setProgress(pct, message) {
+      progressBar.style.width = pct + '%'
+      progressLabel.textContent = message
+    }
+
+    function showError(msg) {
+      errorBox.textContent = 'Error: ' + msg
+      errorBox.style.display = 'block'
+      progressSection.style.display = 'none'
+    }
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault()
+
+      const file = videoInput.files[0]
+      if (!file) return
+
+      // Reset UI
+      errorBox.style.display = 'none'
+      errorBox.textContent = ''
+      textDisplay.textContent = ''
+      outputSection.style.display = 'none'
+      progressSection.style.display = 'block'
+      submitBtn.disabled = true
+      setProgress(5, 'Uploading video...')
+
+      // Upload
+      const formData = new FormData()
+      formData.append('video', file)
+
+      let jobId
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: formData })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.error || `Upload failed (${res.status})`)
+        }
+        const data = await res.json()
+        jobId = data.jobId
+      } catch (err) {
+        showError(err.message)
+        submitBtn.disabled = false
+        return
+      }
+
+      setProgress(10, 'Extracting frames...')
+      outputSection.style.display = 'block'
+
+      // Open SSE stream
+      const evtSource = new EventSource(`/stream/${jobId}`)
+
+      evtSource.onmessage = e => {
+        let data
+        try { data = JSON.parse(e.data) } catch { return }
+
+        if (data.type === 'progress') {
+          const pct = data.total > 0
+            ? Math.round(10 + (data.current / data.total) * 75)
+            : 10
+          setProgress(pct, data.message)
+
+        } else if (data.type === 'word') {
+          textDisplay.textContent += data.token
+          textDisplay.scrollTop = textDisplay.scrollHeight
+
+        } else if (data.type === 'done') {
+          evtSource.close()
+          setProgress(100, 'Done!')
+          setTimeout(() => { progressSection.style.display = 'none' }, 1500)
+          submitBtn.disabled = false
+
+        } else if (data.type === 'error') {
+          evtSource.close()
+          showError(data.message)
+          submitBtn.disabled = false
+        }
+      }
+
+      evtSource.onerror = () => {
+        evtSource.close()
+        showError('Connection lost. Please try again.')
+        submitBtn.disabled = false
+      }
+    })
+
+    // Copy to clipboard
+    copyBtn.addEventListener('click', async () => {
+      const text = textDisplay.textContent
+      if (!text) return
+      try {
+        await navigator.clipboard.writeText(text)
+        copyBtn.textContent = 'Copied!'
+        copyBtn.classList.add('copied')
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy'
+          copyBtn.classList.remove('copied')
+        }, 2000)
+      } catch {
+        copyBtn.textContent = 'Failed'
+        setTimeout(() => { copyBtn.textContent = 'Copy' }, 2000)
+      }
+    })
+  </script>
+</body>
+</html>
