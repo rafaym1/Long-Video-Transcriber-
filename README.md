@@ -1,6 +1,6 @@
 # Video Transcriber
 
-Extract text from screen recordings of Word documents (or any document/text-heavy screen recording). Upload a video, get back the full document text — word by word, in your browser.
+A clean and easy to use transcriber for long video. Additional capability includes extraction of text from screen recordings of Word documents (or any document/text-heavy screen recording). Upload a video, get back the full document text —> word by word, in your browser.
 
 Built because Claude's web UI refuses to transcribe videos longer than ~30 seconds.
 
