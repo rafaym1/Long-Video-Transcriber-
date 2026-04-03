@@ -4,203 +4,296 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Video Transcriber</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
+    /* ── Emerald · Sapphire · Daybreak ──────────────────────────
+       Daybreak  = soft sunrise whites, warm golden sky
+       Emerald   = jewel green  #059669 / #10b981
+       Sapphire  = jewel blue   #1d4ed8 / #2563eb
+    ────────────────────────────────────────────────────────── */
+    :root {
+      --bg-top:       #fef9f0;   /* warm cream — first light of day */
+      --bg-bottom:    #eef6ff;   /* pale sky blue                   */
+      --card:         #ffffff;
+      --card-shadow:  0 2px 24px rgba(37,99,235,0.08), 0 1px 4px rgba(0,0,0,0.06);
+      --border:       #c7ddf8;
+      --border-hover: #93c5fd;
+
+      --emerald:      #059669;
+      --emerald-lt:   #10b981;
+      --emerald-bg:   #ecfdf5;
+
+      --sapphire:     #1d4ed8;
+      --sapphire-lt:  #3b82f6;
+      --sapphire-bg:  #eff6ff;
+
+      --daybreak:     #d97706;   /* warm amber gold */
+      --daybreak-lt:  #f59e0b;
+      --daybreak-bg:  #fffbeb;
+
+      --text:         #1e293b;
+      --text-mid:     #475569;
+      --text-muted:   #94a3b8;
+
+      --error-bg:     #fef2f2;
+      --error-border: #fca5a5;
+      --error-text:   #dc2626;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0f1117;
-      color: #e8e8e8;
+      background: linear-gradient(160deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+      background-attachment: fixed;
+      color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 40px 20px;
+      padding: 48px 20px 64px;
+    }
+
+    /* ── Header ── */
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .logo-gem {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     h1 {
-      font-size: 1.8rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #fff;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+
+    /* "Transcriber" word gets the jewel gradient */
+    h1 .gradient {
+      background: linear-gradient(90deg, var(--emerald) 0%, var(--sapphire-lt) 50%, var(--daybreak-lt) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .subtitle {
-      color: #888;
-      font-size: 0.95rem;
-      margin-bottom: 40px;
+      color: var(--text-muted);
+      font-size: 0.93rem;
+      margin-bottom: 36px;
       text-align: center;
     }
 
+    /* ── Card ── */
     .card {
-      background: #1a1d27;
-      border: 1px solid #2a2d3a;
-      border-radius: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
       padding: 32px;
       width: 100%;
       max-width: 720px;
+      box-shadow: var(--card-shadow);
     }
 
-    /* Upload area */
+    /* ── Upload area ── */
     .upload-area {
-      border: 2px dashed #3a3d4a;
-      border-radius: 8px;
-      padding: 40px;
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 40px 32px;
       text-align: center;
       cursor: pointer;
       transition: border-color 0.2s, background 0.2s;
+      background: var(--sapphire-bg);
     }
-
     .upload-area:hover, .upload-area.dragover {
-      border-color: #5b6af0;
-      background: rgba(91, 106, 240, 0.05);
+      border-color: var(--emerald-lt);
+      background: var(--emerald-bg);
     }
+    .upload-area input[type="file"] { display: none; }
 
-    .upload-area input[type="file"] {
-      display: none;
-    }
+    .upload-icon { font-size: 2.4rem; margin-bottom: 10px; }
 
-    .upload-icon {
-      font-size: 2.5rem;
-      margin-bottom: 12px;
-    }
-
-    .upload-label {
-      font-size: 1rem;
-      color: #aaa;
-    }
-
-    .upload-label strong {
-      color: #5b6af0;
-    }
+    .upload-label { font-size: 0.97rem; color: var(--text-mid); }
+    .upload-label strong { color: var(--emerald); font-weight: 700; }
 
     .file-info {
-      margin-top: 12px;
-      font-size: 0.85rem;
-      color: #888;
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
     }
 
-    /* Submit button */
+    /* ── Buttons ── */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
     .btn {
-      display: block;
-      width: 100%;
-      margin-top: 20px;
-      padding: 12px;
-      background: #5b6af0;
-      color: #fff;
-      font-size: 1rem;
-      font-weight: 600;
+      flex: 1;
+      padding: 12px 20px;
+      font-size: 0.97rem;
+      font-weight: 700;
       border: none;
-      border-radius: 8px;
+      border-radius: 9px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.18s, opacity 0.18s, box-shadow 0.18s;
     }
 
-    .btn:hover:not(:disabled) { background: #4a58e0; }
-    .btn:disabled { background: #333; color: #666; cursor: not-allowed; }
-
-    /* Progress */
-    #progress-section {
-      display: none;
-      margin-top: 24px;
+    .btn-primary {
+      background: linear-gradient(135deg, var(--emerald) 0%, var(--sapphire) 100%);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(5,150,105,0.25);
     }
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 4px 18px rgba(5,150,105,0.35);
+      opacity: 0.93;
+    }
+
+    .btn-cancel {
+      flex: 0 0 auto;
+      padding: 12px 20px;
+      background: #fff;
+      color: var(--error-text);
+      border: 1.5px solid var(--error-border);
+      font-weight: 600;
+    }
+    .btn-cancel:hover { background: var(--error-bg); }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+    /* ── Progress ── */
+    #progress-section { display: none; margin-top: 22px; }
 
     .progress-label {
-      font-size: 0.85rem;
-      color: #aaa;
+      font-size: 0.83rem;
+      color: var(--text-muted);
       margin-bottom: 8px;
     }
 
     .progress-bar-track {
-      background: #2a2d3a;
-      border-radius: 4px;
-      height: 6px;
+      background: #e2e8f0;
+      border-radius: 99px;
+      height: 7px;
       overflow: hidden;
     }
-
     .progress-bar-fill {
       height: 100%;
-      background: #5b6af0;
-      border-radius: 4px;
+      border-radius: 99px;
       width: 0%;
       transition: width 0.4s ease;
+      background: linear-gradient(90deg, var(--emerald) 0%, var(--sapphire-lt) 60%, var(--daybreak-lt) 100%);
     }
 
-    /* Output */
-    #output-section {
-      display: none;
-      margin-top: 24px;
-    }
+    /* ── Output ── */
+    #output-section { display: none; margin-top: 24px; }
 
     .output-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
-
     .output-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #aaa;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
     }
 
-    .copy-btn {
-      padding: 6px 14px;
-      font-size: 0.8rem;
-      background: #2a2d3a;
-      color: #ccc;
-      border: 1px solid #3a3d4a;
-      border-radius: 6px;
+    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .small-btn {
+      padding: 5px 13px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 7px;
       cursor: pointer;
-      transition: background 0.2s, color 0.2s;
+      transition: background 0.15s, color 0.15s;
+      border: 1.5px solid;
     }
 
-    .copy-btn:hover { background: #3a3d4a; color: #fff; }
-    .copy-btn.copied { color: #4caf50; border-color: #4caf50; }
+    .btn-copy  { background: #fff; color: var(--text-mid); border-color: var(--border); }
+    .btn-copy:hover { background: var(--sapphire-bg); color: var(--sapphire); border-color: var(--sapphire-lt); }
+    .btn-copy.copied { color: var(--emerald); border-color: var(--emerald); background: var(--emerald-bg); }
+
+    .btn-pdf   { background: #fff; color: var(--daybreak); border-color: #fcd34d; }
+    .btn-pdf:hover { background: var(--daybreak-bg); }
+
+    .btn-word  { background: #fff; color: var(--sapphire); border-color: #93c5fd; }
+    .btn-word:hover { background: var(--sapphire-bg); }
 
     #text-display {
-      background: #0f1117;
-      border: 1px solid #2a2d3a;
-      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
       padding: 20px;
       min-height: 200px;
       max-height: 500px;
       overflow-y: auto;
-      font-size: 0.95rem;
-      line-height: 1.7;
+      font-size: 0.93rem;
+      line-height: 1.78;
       white-space: pre-wrap;
       word-break: break-word;
-      color: #ddd;
+      color: var(--text);
     }
 
-    /* Error */
+    /* ── Error ── */
     .error-box {
       display: none;
-      margin-top: 16px;
-      padding: 12px 16px;
-      background: rgba(220, 50, 50, 0.1);
-      border: 1px solid rgba(220, 50, 50, 0.3);
+      margin-top: 14px;
+      padding: 11px 16px;
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
       border-radius: 8px;
-      color: #f08080;
-      font-size: 0.9rem;
+      color: var(--error-text);
+      font-size: 0.88rem;
     }
 
-    /* Word appear animation */
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to   { opacity: 1; }
-    }
-    .word-new {
-      animation: fadeIn 0.15s ease;
+    /* ── Footer ── */
+    .footer-credit {
+      margin-top: 44px;
+      font-size: 0.70rem;
+      color: var(--text-muted);
+      text-align: center;
+      letter-spacing: 0.01em;
     }
   </style>
 </head>
 <body>
-  <h1>Video Transcriber</h1>
-  <p class="subtitle">Upload a screen recording of a document — get back the full text.</p>
+
+  <div class="logo-row">
+    <!-- Gem icon built from CSS/SVG — no external assets -->
+    <svg class="logo-gem" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="18,4 32,14 26,32 10,32 4,14" fill="url(#gem)" opacity="0.15"/>
+      <polygon points="18,4 32,14 26,32 10,32 4,14" stroke="url(#gem)" stroke-width="2" fill="none"/>
+      <polyline points="4,14 18,18 32,14" stroke="url(#gem)" stroke-width="1.5" fill="none"/>
+      <line x1="18" y1="4"  x2="18" y2="18" stroke="url(#gem)" stroke-width="1.5"/>
+      <line x1="18" y1="18" x2="10" y2="32" stroke="url(#gem)" stroke-width="1.2" opacity="0.7"/>
+      <line x1="18" y1="18" x2="26" y2="32" stroke="url(#gem)" stroke-width="1.2" opacity="0.7"/>
+      <defs>
+        <linearGradient id="gem" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stop-color="#059669"/>
+          <stop offset="50%"  stop-color="#2563eb"/>
+          <stop offset="100%" stop-color="#f59e0b"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <h1>Video <span class="gradient">Transcriber</span></h1>
+  </div>
+
+  <p class="subtitle">Transcribe videos as long as 10 minutes</p>
 
   <div class="card">
     <form id="upload-form">
@@ -208,11 +301,15 @@
         <input type="file" id="video-input" accept="video/*">
         <div class="upload-icon">&#127916;</div>
         <div class="upload-label">
-          <strong>Click to select</strong> or drag & drop a video
+          <strong>Click to select</strong> or drag &amp; drop a video
         </div>
         <div class="file-info" id="file-info">MP4, MOV, AVI, MKV &mdash; up to 500 MB</div>
       </div>
-      <button class="btn" type="submit" id="submit-btn" disabled>Transcribe</button>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" type="submit" id="submit-btn" disabled>Transcribe</button>
+        <button class="btn btn-cancel" type="button" id="cancel-btn" style="display:none">Cancel</button>
+      </div>
     </form>
 
     <div id="progress-section">
@@ -227,46 +324,49 @@
     <div id="output-section">
       <div class="output-header">
         <span class="output-title">Extracted Text</span>
-        <button class="copy-btn" id="copy-btn">Copy</button>
+        <div class="action-btns">
+          <button class="small-btn btn-copy"  id="copy-btn">Copy</button>
+          <button class="small-btn btn-pdf"   id="pdf-btn">Download PDF</button>
+          <button class="small-btn btn-word"  id="word-btn">Download Word</button>
+        </div>
       </div>
       <div id="text-display"></div>
     </div>
   </div>
 
+  <p class="footer-credit">first of its kind &mdash; thanks to Rafay Mustafa for her open source work</p>
+
   <script>
-    const form = document.getElementById('upload-form')
-    const uploadArea = document.getElementById('upload-area')
-    const videoInput = document.getElementById('video-input')
-    const submitBtn = document.getElementById('submit-btn')
-    const fileInfo = document.getElementById('file-info')
+    const form        = document.getElementById('upload-form')
+    const uploadArea  = document.getElementById('upload-area')
+    const videoInput  = document.getElementById('video-input')
+    const submitBtn   = document.getElementById('submit-btn')
+    const cancelBtn   = document.getElementById('cancel-btn')
+    const fileInfo    = document.getElementById('file-info')
     const progressSection = document.getElementById('progress-section')
-    const progressLabel = document.getElementById('progress-label')
-    const progressBar = document.getElementById('progress-bar')
-    const errorBox = document.getElementById('error-box')
-    const outputSection = document.getElementById('output-section')
+    const progressLabel   = document.getElementById('progress-label')
+    const progressBar     = document.getElementById('progress-bar')
+    const errorBox    = document.getElementById('error-box')
+    const outputSection   = document.getElementById('output-section')
     const textDisplay = document.getElementById('text-display')
-    const copyBtn = document.getElementById('copy-btn')
+    const copyBtn     = document.getElementById('copy-btn')
+    const pdfBtn      = document.getElementById('pdf-btn')
+    const wordBtn     = document.getElementById('word-btn')
 
-    // File selection via click or drag-drop
+    let activeEventSource = null
+    let activeJobId = null
+
+    // ── File selection ──
     uploadArea.addEventListener('click', () => videoInput.click())
-
-    uploadArea.addEventListener('dragover', e => {
-      e.preventDefault()
-      uploadArea.classList.add('dragover')
-    })
+    uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover') })
     uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'))
     uploadArea.addEventListener('drop', e => {
       e.preventDefault()
       uploadArea.classList.remove('dragover')
       const file = e.dataTransfer.files[0]
-      if (file && file.type.startsWith('video/')) {
-        setFile(file)
-      }
+      if (file && file.type.startsWith('video/')) setFile(file)
     })
-
-    videoInput.addEventListener('change', () => {
-      if (videoInput.files[0]) setFile(videoInput.files[0])
-    })
+    videoInput.addEventListener('change', () => { if (videoInput.files[0]) setFile(videoInput.files[0]) })
 
     function setFile(file) {
       fileInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`
@@ -279,27 +379,49 @@
     }
 
     function showError(msg) {
-      errorBox.textContent = 'Error: ' + msg
+      errorBox.textContent = msg
       errorBox.style.display = 'block'
       progressSection.style.display = 'none'
     }
 
+    function resetProcessingUI() {
+      submitBtn.disabled = false
+      cancelBtn.style.display = 'none'
+      activeEventSource = null
+      activeJobId = null
+    }
+
+    // ── Cancel ──
+    cancelBtn.addEventListener('click', async () => {
+      if (!activeJobId) return
+      cancelBtn.disabled = true
+      cancelBtn.textContent = 'Cancelling...'
+      try { await fetch(`/cancel/${activeJobId}`, { method: 'POST' }) } catch {}
+      if (activeEventSource) { activeEventSource.close(); activeEventSource = null }
+      progressSection.style.display = 'none'
+      showError('Transcription cancelled.')
+      cancelBtn.disabled = false
+      cancelBtn.textContent = 'Cancel'
+      cancelBtn.style.display = 'none'
+      submitBtn.disabled = false
+      activeJobId = null
+    })
+
+    // ── Upload & stream ──
     form.addEventListener('submit', async e => {
       e.preventDefault()
-
       const file = videoInput.files[0]
       if (!file) return
 
-      // Reset UI
       errorBox.style.display = 'none'
       errorBox.textContent = ''
       textDisplay.textContent = ''
       outputSection.style.display = 'none'
       progressSection.style.display = 'block'
       submitBtn.disabled = true
+      cancelBtn.style.display = 'inline-block'
       setProgress(5, 'Uploading video...')
 
-      // Upload
       const formData = new FormData()
       formData.append('video', file)
 
@@ -312,26 +434,25 @@
         }
         const data = await res.json()
         jobId = data.jobId
+        activeJobId = jobId
       } catch (err) {
-        showError(err.message)
-        submitBtn.disabled = false
+        showError('Error: ' + err.message)
+        resetProcessingUI()
         return
       }
 
       setProgress(10, 'Extracting frames...')
       outputSection.style.display = 'block'
 
-      // Open SSE stream
       const evtSource = new EventSource(`/stream/${jobId}`)
+      activeEventSource = evtSource
 
       evtSource.onmessage = e => {
         let data
         try { data = JSON.parse(e.data) } catch { return }
 
         if (data.type === 'progress') {
-          const pct = data.total > 0
-            ? Math.round(10 + (data.current / data.total) * 75)
-            : 10
+          const pct = data.total > 0 ? Math.round(10 + (data.current / data.total) * 75) : 10
           setProgress(pct, data.message)
 
         } else if (data.type === 'word') {
@@ -342,23 +463,22 @@
           evtSource.close()
           setProgress(100, 'Done!')
           setTimeout(() => { progressSection.style.display = 'none' }, 1500)
-          submitBtn.disabled = false
+          resetProcessingUI()
 
         } else if (data.type === 'error') {
           evtSource.close()
-          showError(data.message)
-          submitBtn.disabled = false
+          showError('Error: ' + data.message)
+          resetProcessingUI()
         }
       }
 
       evtSource.onerror = () => {
         evtSource.close()
-        showError('Connection lost. Please try again.')
-        submitBtn.disabled = false
+        if (activeJobId) { showError('Connection lost. Please try again.'); resetProcessingUI() }
       }
     })
 
-    // Copy to clipboard
+    // ── Copy ──
     copyBtn.addEventListener('click', async () => {
       const text = textDisplay.textContent
       if (!text) return
@@ -366,14 +486,56 @@
         await navigator.clipboard.writeText(text)
         copyBtn.textContent = 'Copied!'
         copyBtn.classList.add('copied')
-        setTimeout(() => {
-          copyBtn.textContent = 'Copy'
-          copyBtn.classList.remove('copied')
-        }, 2000)
+        setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied') }, 2000)
       } catch {
         copyBtn.textContent = 'Failed'
         setTimeout(() => { copyBtn.textContent = 'Copy' }, 2000)
       }
+    })
+
+    // ── Download PDF ──
+    pdfBtn.addEventListener('click', () => {
+      const text = textDisplay.textContent.trim()
+      if (!text) return
+      const { jsPDF } = window.jspdf
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+      const margin = 16
+      const pageW  = doc.internal.pageSize.getWidth()  - margin * 2
+      const pageH  = doc.internal.pageSize.getHeight() - margin * 2
+      const lineH  = 6.5
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(11)
+      const lines = doc.splitTextToSize(text, pageW)
+      let y = margin
+      for (const line of lines) {
+        if (y + lineH > margin + pageH) { doc.addPage(); y = margin }
+        doc.text(line, margin, y)
+        y += lineH
+      }
+      doc.save('transcription.pdf')
+    })
+
+    // ── Download Word (.doc) ──
+    wordBtn.addEventListener('click', () => {
+      const text = textDisplay.textContent.trim()
+      if (!text) return
+      const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      const html = [
+        '<html xmlns:o="urn:schemas-microsoft-com:office:office"',
+        '      xmlns:w="urn:schemas-microsoft-com:office:word"',
+        '      xmlns="http://www.w3.org/TR/REC-html40">',
+        '<head><meta charset="utf-8"><title>Transcription</title>',
+        '<style>body{font-family:Calibri,sans-serif;font-size:11pt;line-height:1.6;margin:2.5cm}</style>',
+        '</head><body>',
+        '<pre style="white-space:pre-wrap;font-family:Calibri,sans-serif;font-size:11pt">',
+        escaped,
+        '</pre></body></html>'
+      ].join('\n')
+      const blob = new Blob([html], { type: 'application/msword' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = 'transcription.doc'; a.click()
+      URL.revokeObjectURL(url)
     })
   </script>
 </body>

@@ -12,6 +12,7 @@ import { dedupe } from './lib/frameDeduplicator.js'
 import { processAll } from './lib/ocrProcessor.js'
 import { merge } from './lib/textMerger.js'
 import { sseManager } from './lib/sseManager.js'
+import { jobRegistry } from './lib/jobRegistry.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -50,6 +51,12 @@ app.post('/upload', upload.single('video'), async (req, res) => {
   })
 })
 
+// Cancel endpoint — marks job as cancelled; OCR loop exits on next iteration
+app.post('/cancel/:jobId', (req, res) => {
+  jobRegistry.cancel(req.params.jobId)
+  res.json({ ok: true })
+})
+
 // SSE stream endpoint
 app.get('/stream/:jobId', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream')
@@ -82,6 +89,8 @@ async function processJob(jobId) {
       message: `Extracted ${framePaths.length} frames, deduplicating...`
     })
 
+    if (jobRegistry.isCancelled(jobId)) return
+
     // Step 2: Deduplicate similar frames
     const uniqueFrames = dedupe(framePaths)
 
@@ -104,6 +113,8 @@ async function processJob(jobId) {
       message: 'Merging text...'
     })
 
+    if (jobRegistry.isCancelled(jobId)) return
+
     // Step 4: Merge overlapping paragraphs from scroll frames
     const mergedText = merge(ocrResults)
 
@@ -115,6 +126,7 @@ async function processJob(jobId) {
     // Step 5: Stream words one by one
     const tokens = mergedText.split(/(\s+)/)
     for (const token of tokens) {
+      if (jobRegistry.isCancelled(jobId)) break
       sseManager.send(jobId, { type: 'word', token })
       await new Promise(r => setTimeout(r, 30))
     }
@@ -123,8 +135,9 @@ async function processJob(jobId) {
   } catch (err) {
     sseManager.send(jobId, { type: 'error', message: err.message || 'Unknown error' })
   } finally {
-    // Cleanup temp files
+    // Cleanup temp files and registry
     try { await rm(path.join('tmp', jobId), { recursive: true, force: true }) } catch {}
+    jobRegistry.cleanup(jobId)
     sseManager.cleanup(jobId)
   }
 }
